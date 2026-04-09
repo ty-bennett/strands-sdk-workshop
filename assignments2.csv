@@ -1,0 +1,13 @@
+course,assignment,due_date,type,estimated_hours,status,notes
+CSCE 490,Capstone Project Proposal,2026-04-10,project,4,not started,Include problem statement and tech stack
+MATH 374,Linear Algebra Problem Set 5,2026-04-09,homework,2.5,in progress,Focus on eigenvalues section
+BIOL 210,Lab Report 4 - Cell Respiration,2026-04-11,lab,3,not started,Use data from last Thursday's experiment
+ENGL 305,Research Paper Outline,2026-04-14,essay,2,not started,Needs 8 scholarly sources
+CSCE 490,Sprint 1 Code Review,2026-04-12,project,1.5,in progress,Review teammates' PRs before meeting
+ECON 202,Midterm Exam Prep,2026-04-16,exam,5,not started,Chapters 4 through 7
+MATH 374,Quiz 6 - Orthogonality,2026-04-09,exam,1,not started,Covers dot products and projections
+BIOL 210,Pre-lab Quiz 5,2026-04-10,exam,0.5,not started,Online quiz on moodle
+CSCE 490,Architecture Diagram,2026-04-15,project,2,not started,Draw system components and data flow
+ENGL 305,Peer Review - Classmate Draft,2026-04-11,homework,1,not started,Submit feedback form on Canvas
+PHYS 301,Problem Set 8 - Electrostatics,2026-04-13,homework,3.5,not started,Problems 1-12 from chapter 22
+ECON 202,Case Study Response,2026-04-10,homework,1.5,in progress,Half a page on supply chain disruption

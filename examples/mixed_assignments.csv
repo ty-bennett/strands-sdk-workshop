@@ -1,0 +1,21 @@
+course,assignment,due_date,type,estimated_hours,status,notes
+CSCE 350,HW4 - Sorting Algorithms,2026-04-02,homework,3,not started,Should have started earlier
+ENGL 101,Annotated Bibliography,2026-04-05,essay,2,in progress,Need 3 more sources
+MATH 251,Quiz 3,2026-04-07,exam,1.5,not started,Covers chapters 4-5
+HIST 201,Chapter 6-7 Reading Notes,2026-04-04,reading,2,complete,Finished over weekend
+CSCE 350,HW5 - Dynamic Programming,2026-04-09,homework,3,not started,Focus on memoization techniques
+MATH 251,Problem Set 7,2026-04-09,homework,2.5,in progress,
+PHYS 207,Lab Report 5,2026-04-09,lab,4,not started,Data collection complete
+ENGL 101,Persuasive Essay Draft,2026-04-10,essay,2.5,in progress,Need to add counterarguments
+CSCE 350,Lab 7 - Binary Search Trees,2026-04-11,lab,2,not started,Implement insert and delete operations
+MATH 251,Exam 3 Study Guide,2026-04-11,exam,3.5,in progress,Create formula sheet
+HIST 201,Discussion Post Response,2026-04-10,homework,1,not started,Respond to at least 3 peers
+PHYS 207,Problem Set 6,2026-04-12,homework,4,not started,Thermodynamics problems
+CSCE 350,Project Milestone 2,2026-04-12,project,5,in progress,Complete algorithm implementation
+MATH 251,Quiz 4 Preparation,2026-04-13,exam,1.5,not started,Covers sections 6.1-6.3
+ENGL 101,Final Essay Outline,2026-04-16,essay,1,not started,
+CSCE 350,HW6 - Graph Algorithms,2026-04-18,homework,4.5,not started,Focus on Dijkstra's and BFS
+HIST 201,Midterm Exam,2026-04-20,exam,6,not started,Comprehensive review needed
+PHYS 207,Lab 8 - Optics,2026-04-22,lab,3,not started,Bring safety goggles
+MATH 251,Project Proposal,2026-04-25,project,2,not started,Choose topic by next week
+ENGL 101,Research Paper Draft,2026-04-28,essay,8,not started,Start research early

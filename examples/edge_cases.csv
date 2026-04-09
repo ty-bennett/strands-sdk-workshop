@@ -1,0 +1,21 @@
+course,assignment,due_date,type,estimated_hours,status,notes
+CSCE 350,HW with Empty Notes,2026-04-09,homework,3,not started,
+ENGL 101,Assignment with Whitespace Notes,2026-04-10,essay,2.5,in progress,   
+MATH 251,Non-numeric Hours Test,2026-04-08,exam,TBD,not started,Testing invalid hours handling
+CSCE 350,Another Invalid Hours,2026-04-11,lab,unknown,not started,Should display ? for hours
+HIST 201,Special Chars: @#$%^&*(),2026-04-09,reading,1.5,in progress,Testing special characters in name
+PHYS 207,Assignment with "Quotes",2026-04-12,homework,4,not started,Testing quotes in assignment name
+ENGL 101,Emoji Test 🎓📚,2026-04-08,homework,0.5,not started,Testing unicode characters
+MATH 251,Backslash\Test,2026-04-11,exam,3.5,in progress,Testing backslash character
+CSCE 350,Due Today Boundary,2026-04-07,project,5,not started,Testing today boundary (update date to actual today)
+HIST 201,Week End Boundary,2026-04-13,homework,2,not started,Testing week_end boundary (update to actual week_end)
+PHYS 207,Week End Plus One,2026-04-14,lab,3,not started,Testing week_end+1 boundary (update to actual week_end+1)
+CSCE 350,Empty Estimated Hours,2026-04-15,homework,,not started,Testing empty hours field
+MATH 251,Negative Hours Test,2026-04-16,exam,-2,not started,Testing negative hours value
+ENGL 101,Decimal Hours,2026-04-17,essay,2.75,in progress,Testing decimal hours
+HIST 201,Zero Hours,2026-04-18,reading,0,not started,Testing zero hours
+PHYS 207,Very Long Assignment Name That Goes On And On And Tests The Formatting Of Really Long Assignment Names In The Output Display,2026-04-19,homework,4.5,not started,Testing long names
+CSCE 350,Mixed Case STATUS,2026-04-20,lab,2,CoMpLeTe,Testing case sensitivity of complete status
+MATH 251,Lowercase complete,2026-04-21,exam,3,complete,Should be filtered out
+ENGL 101,UPPERCASE COMPLETE,2026-04-22,essay,2,COMPLETE,Should be filtered out
+HIST 201,Tab	Character	Test,2026-04-23,homework,1,not started,Testing tab characters in name

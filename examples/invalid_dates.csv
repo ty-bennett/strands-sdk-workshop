@@ -1,0 +1,13 @@
+course,assignment,due_date,type,estimated_hours,status,notes
+CSCE 350,Invalid Date Format 1,04/09/2026,homework,3,not started,Testing MM/DD/YYYY format
+ENGL 101,Invalid Date Format 2,2026-13-45,essay,2.5,in progress,Testing invalid month and day
+MATH 251,Invalid Date Format 3,09-04-2026,exam,1.5,not started,Testing DD-MM-YYYY format
+CSCE 350,Invalid Date Format 4,April 9 2026,lab,2,not started,Testing text date format
+HIST 201,Invalid Date Format 5,2026/04/09,reading,1,in progress,Testing slashes instead of dashes
+PHYS 207,Invalid Date Format 6,20260409,homework,4,not started,Testing no separators
+ENGL 101,Invalid Date Format 7,2026-4-9,homework,0.5,not started,Testing single digit month/day
+MATH 251,Invalid Date Format 8,26-04-09,exam,3.5,in progress,Testing two-digit year
+CSCE 350,Invalid Date Format 9,2026-02-30,project,5,not started,Testing invalid day for February
+HIST 201,Invalid Date Format 10,not-a-date,homework,1,not started,Testing completely invalid text
+PHYS 207,Empty Date Field,,lab,3,not started,Testing empty date field
+CSCE 350,Whitespace Date,   ,homework,2,not started,Testing whitespace-only date

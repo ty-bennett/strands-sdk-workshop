@@ -1,0 +1,11 @@
+course,assignment,due_date,type,estimated_hours,status,notes
+CSCE 350,HW5 - Dynamic Programming,2026-04-09,homework,3,not started,Focus on memoization techniques
+ENGL 101,Persuasive Essay Draft,2026-04-10,essay,2.5,in progress,Need to add counterarguments
+MATH 251,Quiz 4 Preparation,2026-04-08,exam,1.5,not started,Covers sections 6.1-6.3
+CSCE 350,Lab 7 - Binary Search Trees,2026-04-11,lab,2,not started,Implement insert and delete operations
+HIST 201,Chapter 8 Reading Notes,2026-04-09,reading,1,in progress,Half done
+PHYS 207,Problem Set 6,2026-04-12,homework,4,not started,Thermodynamics problems
+ENGL 101,Peer Review Comments,2026-04-08,homework,0.5,not started,Review 2 classmates' essays
+MATH 251,Exam 3 Study Guide,2026-04-11,exam,3.5,in progress,Create formula sheet
+CSCE 350,Project Milestone 2,2026-04-12,project,5,in progress,Complete algorithm implementation
+HIST 201,Discussion Post Response,2026-04-10,homework,1,not started,Respond to at least 3 peers
