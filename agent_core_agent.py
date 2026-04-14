@@ -369,4 +369,5 @@ def invoke(payload):
     return {"result": str(result)}
 
 
-app.run()
+if __name__ == "__main__":
+    app.run()

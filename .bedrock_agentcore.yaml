@@ -32,7 +32,7 @@ agents:
     bedrock_agentcore:
       agent_id: hosted_agent_kjr92-Kun03pBunM
       agent_arn: arn:aws:bedrock-agentcore:us-east-1:970547346077:runtime/hosted_agent_kjr92-Kun03pBunM
-      agent_session_id: d486a1de-ea2e-47c1-bd85-c7090fc77842
+      agent_session_id: null
     codebuild:
       project_name: null
       execution_role: null
