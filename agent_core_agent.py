@@ -16,54 +16,36 @@ from strands.models import BedrockModel
 from strands_tools import http_request
 
 
-# ---------------------------------------------------------------------------
-# S3 helpers
-# ---------------------------------------------------------------------------
-
 def _parse_s3_uri(s3_uri: str) -> tuple[str, str]:
-    """Split 's3://bucket/key' into (bucket, key)."""
     path = s3_uri.replace("s3://", "")
     bucket, key = path.split("/", 1)
     return bucket, key
 
 
 def _read_s3_text(s3_uri: str) -> str:
-    """Download a text object from S3 and return its contents as a string."""
     bucket, key = _parse_s3_uri(s3_uri)
     s3 = boto3.client("s3")
-    response = s3.get_object(Bucket=bucket, Key=key)
-    return response["Body"].read().decode("utf-8")
+    return s3.get_object(Bucket=bucket, Key=key)["Body"].read().decode("utf-8")
 
 
 def _write_s3_text(content: str, s3_uri: str, content_type: str = "text/plain") -> None:
-    """Upload a text string to S3."""
     bucket, key = _parse_s3_uri(s3_uri)
-    s3 = boto3.client("s3")
-    s3.put_object(Bucket=bucket, Key=key, Body=content.encode(
-        "utf-8"), ContentType=content_type)
+    boto3.client("s3").put_object(Bucket=bucket, Key=key,
+                                  Body=content.encode("utf-8"), ContentType=content_type)
 
 
 def _open_csv(filepath: str):
-    """Return a file-like object for CSV parsing. Supports local paths and s3:// URIs."""
     if filepath.startswith("s3://"):
         return io.StringIO(_read_s3_text(filepath))
     return open(filepath, newline="")
 
 
 def _generate_presigned_url(s3_uri: str, expiry_seconds: int = 3600) -> str:
-    """Generate a presigned download URL for an S3 object."""
     bucket, key = _parse_s3_uri(s3_uri)
-    s3 = boto3.client("s3")
-    return s3.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": bucket, "Key": key},
-        ExpiresIn=expiry_seconds,
+    return boto3.client("s3").generate_presigned_url(
+        "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=expiry_seconds
     )
 
-
-# ---------------------------------------------------------------------------
-# System prompt
-# ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """You are a sharp academic advisor giving a student their morning briefing.
 
@@ -90,20 +72,11 @@ CALENDAR — after the briefing, call schedule_study_blocks with the assignments
 Keep it tight. Direct. No filler."""
 
 
-# ---------------------------------------------------------------------------
-# Priority helper
-# ---------------------------------------------------------------------------
-
 def calculate_priority_score(days_remaining: int, estimated_hours: float,
                              days_until_due_weight: float = 2.0,
                              effort_weight: float = 1.0) -> float:
-    """Lower score = higher priority (more urgent)."""
     return (days_until_due_weight * days_remaining) + (effort_weight * estimated_hours)
 
-
-# ---------------------------------------------------------------------------
-# Tools
-# ---------------------------------------------------------------------------
 
 @tool
 def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
@@ -190,7 +163,8 @@ def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
             buckets[bucket_key].sort(key=lambda x: x[0])
             buckets[bucket_key] = [entry for _, entry in buckets[bucket_key]]
 
-        lines = [f"Today: {today.strftime('%a %b %d')}  |  Week ends: {week_end.strftime('%a %b %d')}\n"]
+        lines = [f"Today: {today.strftime('%a %b %d')}  |  Week ends: {
+            week_end.strftime('%a %b %d')}\n"]
         for key, items in buckets.items():
             bucket_name = key.replace("_", " ").upper()
             lines.append(f"{bucket_name} ({len(items)})")
@@ -212,8 +186,7 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
     """
     Reads the assignment CSV from a local path or S3 URI, calculates prioritized
     study blocks based on estimated hours and due dates, and uploads an ICS calendar
-    file to S3. Returns a presigned download URL valid for 1 hour so the user can
-    import the schedule directly into Google Calendar or Outlook.
+    file to S3. Returns a presigned download URL valid for 1 hour.
 
     Args:
         filepath: Local path or S3 URI to the CSV file with assignment data
@@ -309,11 +282,9 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
                     current_slot += timedelta(minutes=30)
 
         ics_lines = [
-            "BEGIN:VCALENDAR",
-            "VERSION:2.0",
+            "BEGIN:VCALENDAR", "VERSION:2.0",
             "PRODID:-//Academic Advisor Agent//Study Scheduler//EN",
-            "CALSCALE:GREGORIAN",
-            "METHOD:PUBLISH",
+            "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
         ]
         for ev in events:
             ics_lines += [
@@ -323,8 +294,7 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
                 f"DTEND:{ev['end'].strftime('%Y%m%dT%H%M%S')}",
                 f"SUMMARY:{ev['summary']}",
                 f"DESCRIPTION:{ev['description']}",
-                "STATUS:CONFIRMED",
-                "END:VEVENT",
+                "STATUS:CONFIRMED", "END:VEVENT",
             ]
         ics_lines.append("END:VCALENDAR")
 
@@ -332,12 +302,14 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
                        content_type="text/calendar")
         download_url = _generate_presigned_url(output_file)
 
-        summary = [f"Scheduled {len(events)} study block(s) — uploaded to {output_file}\n"]
+        summary = [f"Scheduled {len(events)} study block(s) — uploaded to {
+            output_file}\n"]
         for ev in events:
             duration_mins = int((ev["end"] - ev["start"]).seconds / 60)
             summary.append(
                 f"  {ev['start'].strftime('%a %b %d %I:%M %p')} – "
-                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {ev['summary']}"
+                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {
+                    ev['summary']}"
             )
         summary.append(
             f"\nDownload your schedule (link valid 1 hour):\n{download_url}")
@@ -349,15 +321,10 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
         f.close()
 
 
-# ---------------------------------------------------------------------------
-# Agent Core app
-# ---------------------------------------------------------------------------
-
 app = BedrockAgentCoreApp()
 
-# Lazy singleton — initialized on first invocation, not at import time.
-# This prevents Agent Core from timing out during cold start.
 _agent = None
+
 
 def _get_agent():
     global _agent
@@ -372,16 +339,13 @@ def _get_agent():
 
 @app.entrypoint
 def invoke(payload):
-    """Entry point for Bedrock Agent Core. Accepts a JSON payload with a prompt and
-    an optional assignments_file S3 URI."""
     user_message = payload.get("prompt", "Give me my daily briefing.")
     assignments_file = payload.get(
         "assignments_file",
         "s3://uofsc-awscc-strands-agent-workshop-assignments/assignments/assignments.csv"
     )
-
-    full_prompt = f"{user_message}\nMy assignments file is '{assignments_file}'."
-    result = _get_agent()(full_prompt)
+    result = _get_agent()(f"{user_message}\nMy assignments file is '{
+        assignments_file}'.")
     return {"result": str(result)}
 
 
