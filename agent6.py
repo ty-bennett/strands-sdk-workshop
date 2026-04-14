@@ -1,6 +1,6 @@
 # Written by Ty Bennett
-# Fully hosted on AWS via Bedrock Agent Core.
-# Deploy with: bedrock-agentcore deploy
+# Cloud-deployed version — reads/writes CSV and ICS via S3 instead of local filesystem.
+# AWS credentials come from the execution environment (IAM role, Lambda, EC2, etc.)
 
 import csv
 import io
@@ -9,7 +9,6 @@ import uuid
 from datetime import date, datetime, timedelta
 
 import boto3
-from bedrock_agentcore import BedrockAgentCoreApp
 from botocore.exceptions import ClientError
 from strands import Agent, tool
 from strands.models import BedrockModel
@@ -44,50 +43,58 @@ def _write_s3_text(content: str, s3_uri: str, content_type: str = "text/plain") 
 
 
 def _open_csv(filepath: str):
-    """Return a file-like object for CSV parsing. Supports local paths and s3:// URIs."""
+    """
+    Return a file-like object for CSV parsing.
+    Supports both local paths and s3:// URIs.
+    """
     if filepath.startswith("s3://"):
         return io.StringIO(_read_s3_text(filepath))
     return open(filepath, newline="")
 
 
-def _generate_presigned_url(s3_uri: str, expiry_seconds: int = 3600) -> str:
-    """Generate a presigned download URL for an S3 object."""
-    bucket, key = _parse_s3_uri(s3_uri)
-    s3 = boto3.client("s3")
-    return s3.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": bucket, "Key": key},
-        ExpiresIn=expiry_seconds,
-    )
-
-
 # ---------------------------------------------------------------------------
-# System prompt
+# Agent setup
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are a sharp academic advisor giving a student their morning briefing.
+def load_system_prompt(filepath: str = "system_prompt.txt") -> str:
+    """Load system prompt — supports local path or S3 URI."""
+    try:
+        if filepath.startswith("s3://"):
+            return _read_s3_text(filepath)
+        with open(filepath, "r") as f:
+            return f.read()
+    except (FileNotFoundError, ClientError) as e:
+        raise FileNotFoundError(f"System prompt not found: {filepath}") from e
 
-Structure your response exactly like this:
 
-SITUATION — one blunt sentence on how heavy this week is
+def invoke_with_retry(model, prompt, max_retries=3):
+    """Invoke Bedrock model with exponential backoff retry logic."""
+    for attempt in range(max_retries):
+        try:
+            return model.invoke(prompt)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ThrottlingException":
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                return "Rate limit exceeded. Please wait and try again."
+            raise
 
-TODAY — bullets for what must happen today, in priority order
 
-THIS WEEK — a day-by-day time block plan (Mon through Sun).
-  For each day list the tasks and how long to spend on each,
-  using the estimated_hours from the CSV to guide the schedule.
-  Example: "Tuesday: 2h CSCE 350 HW3, 1h ENGL essay draft"
+_model = None
+_agent = None
 
-HEADS UP — anything due next week worth starting now
 
-TIP — one concrete study tip based on what's coming up.
-  Use http_request to fetch a URL if a subject-specific tip would genuinely help.
-
-CALENDAR — after the briefing, call schedule_study_blocks with the assignments file
-  to generate a study schedule and upload it to S3. Tell the user it is ready and
-  give them the presigned download URL.
-
-Keep it tight. Direct. No filler."""
+def _get_agent():
+    global _model, _agent
+    if _agent is None:
+        _model = BedrockModel(model_id="amazon.nova-pro-v1:0")
+        _agent = Agent(
+            model=_model,
+            system_prompt=load_system_prompt(),
+            tools=[load_assignments, schedule_study_blocks, http_request],
+        )
+    return _agent
 
 
 # ---------------------------------------------------------------------------
@@ -130,6 +137,7 @@ def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
     try:
         today = date.today()
         week_end = date.fromordinal(today.toordinal() + (6 - today.weekday()))
+
         buckets = {"overdue": [], "due_today": [],
                    "due_this_week": [], "upcoming": []}
 
@@ -147,8 +155,10 @@ def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
         row_number = 1
         for row in reader:
             row_number += 1
+
             if row.get("status", "").strip().lower() == "complete":
                 continue
+
             try:
                 due = datetime.strptime(
                     row["due_date"].strip(), "%Y-%m-%d").date()
@@ -190,7 +200,8 @@ def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
             buckets[bucket_key].sort(key=lambda x: x[0])
             buckets[bucket_key] = [entry for _, entry in buckets[bucket_key]]
 
-        lines = [f"Today: {today.strftime('%a %b %d')}  |  Week ends: {week_end.strftime('%a %b %d')}\n"]
+        lines = [f"Today: {today.strftime('%a %b %d')}  |  Week ends: {
+            week_end.strftime('%a %b %d')}\n"]
         for key, items in buckets.items():
             bucket_name = key.replace("_", " ").upper()
             lines.append(f"{bucket_name} ({len(items)})")
@@ -211,19 +222,20 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
                           output_file: str = "s3://uofsc-awscc-strands-agent-workshop-assignments/schedules/study_schedule.ics") -> str:
     """
     Reads the assignment CSV from a local path or S3 URI, calculates prioritized
-    study blocks based on estimated hours and due dates, and uploads an ICS calendar
-    file to S3. Returns a presigned download URL valid for 1 hour so the user can
-    import the schedule directly into Google Calendar or Outlook.
+    study blocks based on estimated hours and due dates, and writes an ICS calendar
+    file to a local path or back to S3. Assignments are scheduled starting from the
+    next available slot today, capped at max_block_hours per session with 30-minute
+    breaks in between. Completed assignments are skipped.
 
     Args:
-        filepath: Local path or S3 URI to the CSV file with assignment data
+        filepath: Local path or S3 URI to CSV file with assignment data
         start_hour: Earliest hour to schedule study blocks, 24h format (default 9 = 9am)
         end_hour: Latest hour to end study blocks, 24h format (default 21 = 9pm)
         max_block_hours: Maximum hours per single study session (default 2.0)
-        output_file: S3 URI for the output ICS file
+        output_file: Local path or S3 URI for the output ICS file
 
     Returns:
-        Summary of scheduled blocks and a presigned S3 download URL for the ICS file
+        Summary of all scheduled blocks and where the ICS file was saved
     """
     try:
         f = _open_csv(filepath)
@@ -327,20 +339,30 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
                 "END:VEVENT",
             ]
         ics_lines.append("END:VCALENDAR")
+        ics_content = "\r\n".join(ics_lines)
 
-        _write_s3_text("\r\n".join(ics_lines), output_file,
-                       content_type="text/calendar")
-        download_url = _generate_presigned_url(output_file)
+        # Write ICS to S3 or local path
+        if output_file.startswith("s3://"):
+            _write_s3_text(ics_content, output_file,
+                           content_type="text/calendar")
+            destination = f"uploaded to {output_file}"
+        else:
+            with open(output_file, "w") as out:
+                out.write(ics_content)
+            destination = f"saved to {output_file}"
 
-        summary = [f"Scheduled {len(events)} study block(s) — uploaded to {output_file}\n"]
+        summary = [f"Scheduled {len(events)} study block(s) — {destination}\n"]
         for ev in events:
             duration_mins = int((ev["end"] - ev["start"]).seconds / 60)
             summary.append(
                 f"  {ev['start'].strftime('%a %b %d %I:%M %p')} – "
-                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {ev['summary']}"
+                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {
+                    ev['summary']}"
             )
         summary.append(
-            f"\nDownload your schedule (link valid 1 hour):\n{download_url}")
+            "\nTo add to Google Calendar: Settings → Import → select the ICS file")
+        summary.append(
+            "To add to Outlook: File → Open & Export → Import/Export → Import an iCalendar file")
         return "\n".join(summary)
 
     except csv.Error as e:
@@ -350,40 +372,11 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
 
 
 # ---------------------------------------------------------------------------
-# Agent Core app
+# ---------------------------------------------------------------------------
+# Entry point
 # ---------------------------------------------------------------------------
 
-app = BedrockAgentCoreApp()
-
-# Lazy singleton — initialized on first invocation, not at import time.
-# This prevents Agent Core from timing out during cold start.
-_agent = None
-
-def _get_agent():
-    global _agent
-    if _agent is None:
-        _agent = Agent(
-            model=BedrockModel(model_id="amazon.nova-pro-v1:0"),
-            system_prompt=SYSTEM_PROMPT,
-            tools=[load_assignments, schedule_study_blocks, http_request],
-        )
-    return _agent
-
-
-@app.entrypoint
-def invoke(payload):
-    """Entry point for Bedrock Agent Core. Accepts a JSON payload with a prompt and
-    an optional assignments_file S3 URI."""
-    user_message = payload.get("prompt", "Give me my daily briefing.")
-    assignments_file = payload.get(
-        "assignments_file",
-        "s3://uofsc-awscc-strands-agent-workshop-assignments/assignments/assignments.csv"
-    )
-
-    full_prompt = f"{user_message}\nMy assignments file is '{assignments_file}'."
-    result = _get_agent()(full_prompt)
-    return {"result": str(result)}
-
-
 if __name__ == "__main__":
-    app.run()
+    _get_agent()("""Give me my daily briefing and schedule study blocks on my calendar.
+        My assignments file is at this presigned URL
+        'https://uofsc-awscc-strands-agent-workshop-assignments.s3.us-east-1.amazonaws.com/assignments/assignments.csv?response-content-disposition=inline&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEL%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJGMEQCIHxFhmtgajRm68Nm93MCveBl8VoPe1TeDXhwu9OSSV5BAiBSfs9JatZ4BtMc8BYTMCPDbqLCsWh4SJAWislIx%2FuhJirCAwiH%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAAaDDk3MDU0NzM0NjA3NyIM2bzLD%2BswnNumx3DsKpYD%2BPpNdUqLQZ7%2FeV%2FoVPDDxPgr8HSb1pL6C0%2BxwBqAUg7nqsXh9DHHX2aN5qTqIJNnhTehWj4rOxKSF0%2FwYDrfUl7N9Fryt0FXLtZAkA6Ico7sJQTuevvXfnGBVbAw71i00If%2FBsqTQfUQydjEYNcbQDIQjAXSVMl%2FA%2FpSiGjSWiyOglhAyKUdxynXYt9I8FDglEP53kYJMVzeQAdX5%2BQXCNftoX9clzAikYSpUnkbsdoUJjRg%2Ba7%2FAOeL4NGMX58HBGI9DnZ%2FzwaalFsGQ0%2B4FvVotymMjp9njC53Uc%2F%2BNiHVgTDXBq9LYY9ZTQv7diR0uqFh%2FS92NKUqLOT4ff2gs8C25R0%2BLSeB%2FiU58uKIYyW4sBmw1h2dS02uZzTZTmdhdmyEvuhoc9ogAY5bL6lGk0lhu4JyzOJggkMnwwXpJLB0M36ovX0LiGg8r66cQ8gsTL%2FO4ksfvZWucY5LA69OXPfx%2F0%2FnF4mv%2FTOLK8zMil6TRxSs6JXPFYP%2FOUmHk7GSA2xProsrV4WUxozis8HzpH5zO9Oa2jDqp%2FbOBjrfAmndANz3Be%2Fogzct6w2X%2FNN%2Bq2ecnfgtyyN%2Fxov8ijbTInd3w%2FO99KEKb86Ecx9qTmDZkEUJtYE3WZzHIC89X%2F7QR%2BP5usTiYNqevJZrMZ2ls1axtaSuGk3iBdM5QJpjKSaNuS%2FA8msWXmuvTAv8nKt2Sys0MUl17NVkxgP9EaLS88ViTr93kqjgXdLEvERN%2B0eq89E3oNZiRVGg%2FeFgJIoN4NsZIzWRg%2FwvovDDwhfBNJ2wssi1ySK%2BLNFjzPcw270d1D%2BJakzJd8c9aypwOz24lh%2FLFNM9fjdyQrcZgCC0tMgnR4XT%2F%2BaxWiKp7nq3X2IGPKWM4jW4WOlz3lqB71uWMPTuimbxum6rz44JcbHfEtvUFQmKShtlhvYE4jpuO4xdEuZcAR6czlEpoMdkW2Z4Fs00wMszyiyZpgkVfyd6WMyYvoFk%2BkOjtgChdYnD32yP6%2B7Pz%2FCb7LAw1snSqw%3D%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIA6D6JBHKO5IITVASE%2F20260414%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260414T060437Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=83556c75d395ba9ddbce6935bc14e514ff251e719647152a34335d9bee915155' .""")

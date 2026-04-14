@@ -1,3 +1,6 @@
 strands-agents
 strands-agents-tools
 python-dotenv
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
