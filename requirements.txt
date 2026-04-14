@@ -1,5 +1,6 @@
 strands-agents
 strands-agents-tools
+bedrock-agentcore
 python-dotenv
 google-api-python-client
 google-auth-oauthlib
