@@ -15,7 +15,9 @@ def get_current_time() -> str:
 
 # Pass the tool in a list — the agent will call it automatically when needed.
 agent = Agent(
-    model=BedrockModel(model_id="amazon.nova-pro-v1:0"),
+    model=BedrockModel
+    (
+        model_id="amazon.nova-pro-v1:0"),
     tools=[get_current_time],
 )
 
