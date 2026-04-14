@@ -1,0 +1,1 @@
+python agent6.py s3://uofsc-awscc-strands-agent-workshop-assignments/assignments/assignments.csv study_schedule_<your_initials>.ics

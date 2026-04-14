@@ -17,6 +17,7 @@ import os
 import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -24,6 +25,38 @@ load_dotenv()
 
 # Calendar read scope — matches your existing project's scopes
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_CALENDARS = [
+    item.strip()
+    for item in os.getenv(
+        "GOOGLE_CALENDARS",
+        "primary,tybennett924@gmail.com,school schedule",
+    ).split(",")
+    if item.strip()
+]
+
+
+def _resolve_path(path: str) -> Path:
+    file_path = Path(path).expanduser()
+    if not file_path.is_absolute():
+        file_path = BASE_DIR / file_path
+    return file_path
+
+
+def _resolve_output_path(path: str) -> Path:
+    output_path = Path(path).expanduser()
+    if output_path.is_absolute():
+        return output_path
+    return BASE_DIR / output_path
+
+
+def _escape_ics_text(value: str) -> str:
+    return (
+        value.replace("\\", "\\\\")
+        .replace("\n", "\\n")
+        .replace(",", r"\,")
+        .replace(";", r"\;")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -36,33 +69,88 @@ def _get_calendar_service():
     Saves token.json after first login so subsequent runs are automatic.
     """
     creds = None
+    token_path = _resolve_path("token.json")
+    credentials_path = _resolve_path("credentials.json")
 
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if token_path.exists():
+        creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES)
+                str(credentials_path), SCOPES)
             creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
+        with token_path.open("w") as token:
             token.write(creds.to_json())
 
     return build("calendar", "v3", credentials=creds)
 
 
-def _get_busy_slots(start_dt: datetime, end_dt: datetime) -> list[tuple[datetime, datetime]]:
+def _resolve_calendar_ids(service, requested_calendars: list[str]) -> tuple[list[str], list[str]]:
+    calendar_entries = []
+    page_token = None
+
+    while True:
+        response = service.calendarList().list(pageToken=page_token).execute()
+        calendar_entries.extend(response.get("items", []))
+        page_token = response.get("nextPageToken")
+        if not page_token:
+            break
+
+    ids_by_key = {}
+    for entry in calendar_entries:
+        calendar_id = entry.get("id", "").strip()
+        summary = entry.get("summary", "").strip()
+        if calendar_id:
+            ids_by_key[calendar_id.lower()] = calendar_id
+        if summary:
+            ids_by_key[summary.lower()] = calendar_id
+
+    resolved = []
+    unresolved = []
+    seen = set()
+
+    for calendar_name in requested_calendars:
+        key = calendar_name.strip().lower()
+        resolved_id = "primary" if key == "primary" else ids_by_key.get(key)
+        if not resolved_id:
+            unresolved.append(calendar_name)
+            continue
+        if resolved_id not in seen:
+            resolved.append(resolved_id)
+            seen.add(resolved_id)
+
+    return resolved, unresolved
+
+
+def _parse_event_datetime(value: str) -> datetime:
+    if "T" in value:
+        iso_value = value.replace("Z", "+00:00")
+        return datetime.fromisoformat(iso_value).astimezone().replace(tzinfo=None)
+
+    day = date.fromisoformat(value)
+    return datetime(day.year, day.month, day.day, 0, 0)
+
+
+def _get_busy_slots(start_dt: datetime, end_dt: datetime) -> tuple[list[tuple[datetime, datetime]], list[str], list[str], list[str]]:
     """
     Fetch all calendar events between start_dt and end_dt from both the default
     calendar (tybennett924@gmail.com) and the 'school schedule' calendar.
     Returns a combined list of (event_start, event_end) tuples in local time.
     """
     service = _get_calendar_service()
+    calendar_ids, unresolved = _resolve_calendar_ids(service, DEFAULT_CALENDARS)
+    if not calendar_ids:
+        raise RuntimeError(
+            "No readable Google calendars were resolved. "
+            f"Configured calendars: {', '.join(DEFAULT_CALENDARS)}"
+        )
 
-    calendar_ids = ["tybennett924@gmail.com", "school schedule"]
     busy = []
+    checked = []
+    errors = []
 
     for cal_id in calendar_ids:
         try:
@@ -73,8 +161,9 @@ def _get_busy_slots(start_dt: datetime, end_dt: datetime) -> list[tuple[datetime
                 singleEvents=True,
                 orderBy="startTime",
             ).execute()
-        except Exception:
-            # Skip calendars that can't be read (e.g. wrong ID or no access)
+            checked.append(cal_id)
+        except Exception as exc:
+            errors.append(f"{cal_id}: {exc}")
             continue
 
         for event in events_result.get("items", []):
@@ -83,17 +172,16 @@ def _get_busy_slots(start_dt: datetime, end_dt: datetime) -> list[tuple[datetime
 
             # Parse and convert to naive local datetime for comparison
             if "T" in start:
-                ev_start = datetime.fromisoformat(start).replace(tzinfo=None)
-                ev_end = datetime.fromisoformat(end).replace(tzinfo=None)
+                ev_start = _parse_event_datetime(start)
+                ev_end = _parse_event_datetime(end)
             else:
-                # All-day event — block the whole day
-                d = date.fromisoformat(start)
-                ev_start = datetime(d.year, d.month, d.day, 0, 0)
-                ev_end = datetime(d.year, d.month, d.day, 23, 59)
+                # Google Calendar all-day event end dates are exclusive.
+                ev_start = _parse_event_datetime(start)
+                ev_end = _parse_event_datetime(end)
 
             busy.append((ev_start, ev_end))
 
-    return busy
+    return busy, checked, unresolved, errors
 
 
 def _overlaps(slot_start: datetime, slot_end: datetime,
@@ -111,12 +199,15 @@ def _overlaps(slot_start: datetime, slot_end: datetime,
 
 def load_system_prompt(filepath: str = "system_prompt.txt") -> str:
     """Load system prompt from file."""
+    prompt_path = _resolve_path(filepath)
     try:
-        with open(filepath, "r") as f:
+        with prompt_path.open("r") as f:
             return f.read()
     except FileNotFoundError:
-        raise FileNotFoundError(f"System prompt file not found: {
-                                filepath}. This file is required for agent operation.")
+        raise FileNotFoundError(
+            f"System prompt file not found: {prompt_path}. "
+            "This file is required for agent operation."
+        )
 
 
 def calculate_priority_score(days_remaining: int, estimated_hours: float,
@@ -129,6 +220,44 @@ def calculate_priority_score(days_remaining: int, estimated_hours: float,
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
+
+@tool
+def get_gmail_calendar_events(filepath: str, start_hour: int = 9, end_hour: int = 21,
+                              max_block_hours: float = 2.0,
+                              output_file: str = "study_schedule.ics") -> str:
+    """
+    Reads the Google Calendar of the specified user and then returns the times in which the user is busy.
+    By doing so, you can see when the user is free to study or complete assignments. Assignment prioroty
+    should be prioritized based on the priority score descending.
+    """
+    window_start = datetime.now()
+    window_end = window_start + timedelta(days=14)
+
+    try:
+        busy_slots, checked, unresolved, errors = _get_busy_slots(window_start, window_end)
+    except Exception as exc:
+        return f"Could not read Google Calendar: {exc}"
+
+    lines = [
+        f"Checked Google Calendar from {window_start.strftime('%Y-%m-%d %I:%M %p')} "
+        f"to {window_end.strftime('%Y-%m-%d %I:%M %p')}.",
+        f"Resolved calendars: {', '.join(checked) if checked else '(none)'}",
+    ]
+
+    if unresolved:
+        lines.append(f"Unresolved calendar names: {', '.join(unresolved)}")
+    if errors:
+        lines.append(f"Calendar read errors: {' | '.join(errors)}")
+
+    lines.append(f"Busy events found: {len(busy_slots)}")
+    for start_dt, end_dt in busy_slots[:25]:
+        lines.append(
+            f"  {start_dt.strftime('%a %b %d %I:%M %p')} - "
+            f"{end_dt.strftime('%I:%M %p')}"
+        )
+
+    return "\n".join(lines)
+
 
 @tool
 def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
@@ -148,7 +277,7 @@ def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
         Formatted string with categorized, prioritized assignments and date metadata
     """
     try:
-        f = open(filepath, newline="")
+        f = _resolve_path(filepath).open(newline="")
     except FileNotFoundError:
         return f"Assignment file not found: {filepath}"
 
@@ -215,8 +344,10 @@ def load_assignments(filepath: str, days_until_due_weight: float = 2.0,
             buckets[bucket_key].sort(key=lambda x: x[0])
             buckets[bucket_key] = [entry for _, entry in buckets[bucket_key]]
 
-        lines = [f"Today: {today.strftime('%a %b %d')}  |  Week ends: {
-            week_end.strftime('%a %b %d')}\n"]
+        lines = [
+            f"Today: {today.strftime('%a %b %d')}  |  "
+            f"Week ends: {week_end.strftime('%a %b %d')}\n"
+        ]
         for key, items in buckets.items():
             bucket_name = key.replace("_", " ").upper()
             lines.append(f"{bucket_name} ({len(items)})")
@@ -250,10 +381,13 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
     Returns:
         Summary of scheduled blocks and path to the generated ICS file
     """
+    input_path = _resolve_path(filepath)
+    output_path = _resolve_output_path(output_file)
+
     try:
-        f = open(filepath, newline="")
+        f = input_path.open(newline="")
     except FileNotFoundError:
-        return f"Assignment file not found: {filepath}"
+        return f"Assignment file not found: {input_path}"
 
     try:
         today = date.today()
@@ -301,13 +435,21 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
         window_start = datetime.now()
         window_end = window_start + timedelta(days=14)
         try:
-            busy_slots = _get_busy_slots(window_start, window_end)
-            calendar_status = f"Checked Google Calendar — {
-                len(busy_slots)} existing event(s) found."
+            busy_slots, checked, unresolved, errors = _get_busy_slots(window_start, window_end)
+            calendar_status = (
+                f"Checked Google Calendar: {len(busy_slots)} existing event(s) found "
+                f"across {', '.join(checked) if checked else '(no readable calendars)'}."
+            )
+            if unresolved:
+                calendar_status += f" Unresolved calendars: {', '.join(unresolved)}."
+            if errors:
+                calendar_status += f" Read errors: {' | '.join(errors)}."
         except Exception as e:
             busy_slots = []
-            calendar_status = f"Could not read Google Calendar ({
-                e}). Scheduling without conflict checks."
+            calendar_status = (
+                f"Could not read Google Calendar ({e}). "
+                "Scheduling without conflict checks."
+            )
 
         # Find next available slot
         now = datetime.now()
@@ -361,29 +503,33 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
             ics_lines += [
                 "BEGIN:VEVENT",
                 f"UID:{ev['uid']}",
+                f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
                 f"DTSTART:{ev['start'].strftime('%Y%m%dT%H%M%S')}",
                 f"DTEND:{ev['end'].strftime('%Y%m%dT%H%M%S')}",
-                f"SUMMARY:{ev['summary']}",
-                f"DESCRIPTION:{ev['description']}",
+                f"SUMMARY:{_escape_ics_text(ev['summary'])}",
+                f"DESCRIPTION:{_escape_ics_text(ev['description'])}",
                 "STATUS:CONFIRMED",
                 "END:VEVENT",
             ]
         ics_lines.append("END:VCALENDAR")
 
-        with open(output_file, "w") as out:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", newline="") as out:
             out.write("\r\n".join(ics_lines))
 
-        summary = [calendar_status, f"Scheduled {
-            len(events)} study block(s) — saved to {output_file}\n"]
+        summary = [
+            calendar_status,
+            f"Scheduled {len(events)} study block(s) - saved to {output_path}\n",
+        ]
         for ev in events:
             duration_mins = int((ev["end"] - ev["start"]).seconds / 60)
             summary.append(
                 f"  {ev['start'].strftime('%a %b %d %I:%M %p')} – "
-                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {
-                    ev['summary']}"
+                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {ev['summary']}"
             )
         summary.append(
-            f"\nTo import: Google Calendar → Settings → Import → select {output_file}")
+            f"\nTo import: Google Calendar → Settings → Import → select {output_path}"
+        )
         return "\n".join(summary)
 
     except csv.Error as e:
@@ -405,11 +551,15 @@ def _get_agent():
         _agent = Agent(
             model=BedrockModel(model_id="amazon.nova-pro-v1:0"),
             system_prompt=load_system_prompt(),
-            tools=[load_assignments, schedule_study_blocks, http_request],
+            tools=[get_gmail_calendar_events, load_assignments, schedule_study_blocks, http_request],
         )
     return _agent
 
 
 if __name__ == "__main__":
-    _get_agent()("""Give me my daily briefing and schedule study blocks around my existing calendar events.
-        My assignments file is 'assignments.csv'.""")
+    assignments_path = _resolve_path("assignments.csv")
+    configured_calendars = ", ".join(DEFAULT_CALENDARS)
+    _get_agent()(
+        f"""Read my existing calendar and then give me a daily briefing and schedule study blocks around my existing calendar events.
+        My assignments file is '{assignments_path}'. My existing calendar names are '{configured_calendars}'."""
+    )
