@@ -1,4 +1,4 @@
-default_agent: hosted_agent_kjr92
+default_agent: agent_core_agent_full
 agents:
   hosted_agent_kjr92:
     name: hosted_agent_kjr92
@@ -42,6 +42,126 @@ agents:
       memory_id: hosted_agent_kjr92_mem-ZMfBceCqRh
       memory_arn: arn:aws:bedrock-agentcore:us-east-1:970547346077:memory/hosted_agent_kjr92_mem-ZMfBceCqRh
       memory_name: hosted_agent_kjr92_mem
+      event_expiry_days: 30
+      first_invoke_memory_check_done: true
+      was_created_by_toolkit: true
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
+    oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false
+  agent_core_agent:
+    name: agent_core_agent
+    language: python
+    node_version: '20'
+    entrypoint: /Users/tybennett/Developer/ai/custom_agents_workshop/agent_core_agent.py
+    deployment_type: direct_code_deploy
+    runtime_type: PYTHON_3_11
+    platform: linux/arm64
+    container_runtime: null
+    source_path: /Users/tybennett/Developer/ai/custom_agents_workshop
+    aws:
+      execution_role: arn:aws:iam::970547346077:role/AmazonBedrockAgentCoreSDKRuntime-us-east-1-cf096ca2cc
+      execution_role_auto_create: false
+      account: '970547346077'
+      region: us-east-1
+      ecr_repository: null
+      ecr_auto_create: false
+      s3_path: s3://bedrock-agentcore-codebuild-sources-970547346077-us-east-1
+      s3_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+        network_mode_config: null
+      protocol_configuration:
+        server_protocol: HTTP
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
+    bedrock_agentcore:
+      agent_id: agent_core_agent-dRkvBg25DD
+      agent_arn: arn:aws:bedrock-agentcore:us-east-1:970547346077:runtime/agent_core_agent-dRkvBg25DD
+      agent_session_id: 0d660e2e-d2e7-4340-b421-bb151ffc1c32
+    codebuild:
+      project_name: null
+      execution_role: null
+      source_bucket: null
+    memory:
+      mode: STM_ONLY
+      memory_id: agent_core_agent_mem-JKKL6bDotI
+      memory_arn: arn:aws:bedrock-agentcore:us-east-1:970547346077:memory/agent_core_agent_mem-JKKL6bDotI
+      memory_name: agent_core_agent_mem
+      event_expiry_days: 30
+      first_invoke_memory_check_done: true
+      was_created_by_toolkit: true
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
+    oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false
+  agent_core_agent_full:
+    name: agent_core_agent_full
+    language: python
+    node_version: '20'
+    entrypoint: /Users/tybennett/Developer/ai/custom_agents_workshop/agent_core_agent_full.py
+    deployment_type: direct_code_deploy
+    runtime_type: PYTHON_3_13
+    platform: linux/arm64
+    container_runtime: null
+    source_path: /Users/tybennett/Developer/ai/custom_agents_workshop
+    aws:
+      execution_role: arn:aws:iam::970547346077:role/AmazonBedrockAgentCoreSDKRuntime-us-east-1-3d48f4ac55
+      execution_role_auto_create: false
+      account: '970547346077'
+      region: us-east-1
+      ecr_repository: null
+      ecr_auto_create: false
+      s3_path: s3://bedrock-agentcore-codebuild-sources-970547346077-us-east-1
+      s3_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+        network_mode_config: null
+      protocol_configuration:
+        server_protocol: HTTP
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
+    bedrock_agentcore:
+      agent_id: agent_core_agent_full-nIg6S586W1
+      agent_arn: arn:aws:bedrock-agentcore:us-east-1:970547346077:runtime/agent_core_agent_full-nIg6S586W1
+      agent_session_id: d8aa0843-ca78-47cf-8937-0692f9bab5be
+    codebuild:
+      project_name: null
+      execution_role: null
+      source_bucket: null
+    memory:
+      mode: STM_ONLY
+      memory_id: agent_core_agent_full_mem-6S12szByEO
+      memory_arn: arn:aws:bedrock-agentcore:us-east-1:970547346077:memory/agent_core_agent_full_mem-6S12szByEO
+      memory_name: agent_core_agent_full_mem
       event_expiry_days: 30
       first_invoke_memory_check_done: true
       was_created_by_toolkit: true

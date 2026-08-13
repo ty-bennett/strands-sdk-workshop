@@ -1,0 +1,13 @@
+# Dependencies for the hosted Agent Core deployments only.
+# The local workshop files (agent1-6) use the fuller requirements.txt,
+# which additionally carries the google-* packages and the [ollama] extra.
+#
+# Neither hosted agent reads Google Calendar, so no google-* packages here.
+#
+# Point an agent at this file with:
+#   agentcore configure -e <entrypoint>.py -rf requirements-agentcore.txt
+
+strands-agents
+strands-agents-tools
+bedrock-agentcore
+boto3

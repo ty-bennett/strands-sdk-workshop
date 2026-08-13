@@ -39,7 +39,7 @@ def invoke_with_retry(model, prompt, max_retries=3):
             raise
 
 
-model = BedrockModel(model_id="amazon.nova-pro-v1:0")
+model = BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 
 def calculate_priority_score(days_remaining: int, estimated_hours: float,

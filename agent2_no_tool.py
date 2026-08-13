@@ -17,7 +17,7 @@ load_dotenv()
 agent = Agent(
     model=BedrockModel
     (
-        model_id="amazon.nova-pro-v1:0")
+        model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
 )
 
 if __name__ == "__main__":

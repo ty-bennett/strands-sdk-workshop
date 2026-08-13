@@ -1,0 +1,27 @@
+╭──────────────────────────────────────────────────────────────────────── agent_core_agent_full ─────────────────────────────────────────────────────────────────────────╮
+│ Session: d8aa0843-ca78-47cf-8937-0692f9bab5be                                                                                                                          │
+│ Request ID: b869c369-3840-42c0-8d00-4e8c33f0e0ec                                                                                                                       │
+│ ARN: arn:aws:bedrock-agentcore:us-east-1:970547346077:runtime/agent_core_agent_full-nIg6S586W1                                                                         │
+│ Logs: aws logs tail /aws/bedrock-agentcore/runtimes/agent_core_agent_full-nIg6S586W1-DEFAULT --log-stream-name-prefix "2026/08/13/[runtime-logs" --follow              │
+│       aws logs tail /aws/bedrock-agentcore/runtimes/agent_core_agent_full-nIg6S586W1-DEFAULT --log-stream-name-prefix "2026/08/13/[runtime-logs" --since 1h            │
+│ GenAI Dashboard: https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#gen-ai-observability/agent-core                                                       │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Response:
+{"result": "**Your calendar is ready.**\n\nDownload link: 
+https://uofsc-awscc-strands-agent-workshop-assignments.s3.amazonaws.com/schedules/study_schedule.ics?AWSAccessKeyId=ASIA6D6JBHKOSO4X56DB&Signature=eUKbdHRbnV1s0vxUXMfrsIC
+sxlw%3D&x-amz-security-token=IQoJb3JpZ2luX2VjECUaCXVzLWVhc3QtMSJHMEUCIQC7r4skpHenQ1aoRYu5Fk3ZLodoezug0ZlZpkvc56giOAIgNnOWYnsukcuhd7b1DJJQ44cUfdwHEfvUtjxKh6OtCCUqmQMI7v%2F
+%2F%2F%2F%2F%2F%2F%2F%2F%2FARAAGgw5NzA1NDczNDYwNzciDNcxoI%2FA9IFNIY4hbSrtAg6UeviRXxPSlMon%2FLq13Q6mxqvxt0knA0ovqNDr3VXX4tzWniGsjxf1RRsIJKWmRWuMj33PiQ0xf4b97vY97dKT%2FQffM
+64nw1qxuSeHCIHxrzi1OX0DwhT%2BbInwoWGIY41ZGxphVUYU8K1e5kOcZHxUKsmsHZ%2FlvtaWisp7uaW4dxOqO3SDEYzUpGmOAvtZYm5aGin0Qm%2F73yq8cTbMV5bos9%2FXiQWr2HsssqCY8Ns5b0ayg4usAoyl2%2Bv7U
+WgJ0doukS4yT6WZ%2F7fFb7PCt0r879Qbamef6TXvyWu%2FI7be%2FWBGXfoQ721JVcBG5RE1HjuFUursVDElF0IwauHSxM5IlRhKzrkBwJJMXjAXB1JKy99OZReRXJzJYdDqc00KnXa0RT85pN2amWFkt7D4DBLIbEc0uGp98
+sRvVdAuxn6p2EacTGT7z1TCr1y%2FwF7DDEW8wWetx39ici%2BOVaAhqDA8mAyuOyQkz3NwANpNMPTh%2BNMGOpUBw717qmNULiN1fGgiP%2F%2FxBmYbOM%2B4o7%2Fq9xavxOEt9qeU6x5X0R2vlm9pLceM2P%2BZTjtDwp0
+kyyF4TXlQ%2BptzfigsV%2FW%2BTrFa63K36sJSSuVNudm3Vhi69RvBXiSwMtoxWcXUoYe3IGIHkwfTm50YP6seYdbOa4izW7BiBM7i44qeajVdyh0m2u5QWRJYy6mOHjsJMpk%3D&Expires=1786741469\n\ncurl 
+download: curl -L 
+'https://uofsc-awscc-strands-agent-workshop-assignments.s3.amazonaws.com/schedules/study_schedule.ics?AWSAccessKeyId=ASIA6D6JBHKOSO4X56DB&Signature=eUKbdHRbnV1s0vxUXMfrsI
+Csxlw%3D&x-amz-security-token=IQoJb3JpZ2luX2VjECUaCXVzLWVhc3QtMSJHMEUCIQC7r4skpHenQ1aoRYu5Fk3ZLodoezug0ZlZpkvc56giOAIgNnOWYnsukcuhd7b1DJJQ44cUfdwHEfvUtjxKh6OtCCUqmQMI7v%2
+F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAAGgw5NzA1NDczNDYwNzciDNcxoI%2FA9IFNIY4hbSrtAg6UeviRXxPSlMon%2FLq13Q6mxqvxt0knA0ovqNDr3VXX4tzWniGsjxf1RRsIJKWmRWuMj33PiQ0xf4b97vY97dKT%2FQff
+M64nw1qxuSeHCIHxrzi1OX0DwhT%2BbInwoWGIY41ZGxphVUYU8K1e5kOcZHxUKsmsHZ%2FlvtaWisp7uaW4dxOqO3SDEYzUpGmOAvtZYm5aGin0Qm%2F73yq8cTbMV5bos9%2FXiQWr2HsssqCY8Ns5b0ayg4usAoyl2%2Bv7
+UWgJ0doukS4yT6WZ%2F7fFb7PCt0r879Qbamef6TXvyWu%2FI7be%2FWBGXfoQ721JVcBG5RE1HjuFUursVDElF0IwauHSxM5IlRhKzrkBwJJMXjAXB1JKy99OZReRXJzJYdDqc00KnXa0RT85pN2amWFkt7D4DBLIbEc0uGp9
+8sRvVdAuxn6p2EacTGT7z1TCr1y%2FwF7DDEW8wWetx39ici%2BOVaAhqDA8mAyuOyQkz3NwANpNMPTh%2BNMGOpUBw717qmNULiN1fGgiP%2F%2FxBmYbOM%2B4o7%2Fq9xavxOEt9qeU6x5X0R2vlm9pLceM2P%2BZTjtDwp
+0kyyF4TXlQ%2BptzfigsV%2FW%2BTrFa63K36sJSSuVNudm3Vhi69RvBXiSwMtoxWcXUoYe3IGIHkwfTm50YP6seYdbOa4izW7BiBM7i44qeajVdyh0m2u5QWRJYy6mOHjsJMpk%3D&Expires=1786741469' -o 
+study_schedule.ics\n\nReady to import into Google Calendar or Outlook.\n"}

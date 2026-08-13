@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-model = BedrockModel(model_id="amazon.nova-pro-v1:0")
+model = BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 
 def calculate_priority_score(days_remaining: int, estimated_hours: float,
@@ -260,4 +260,4 @@ agent = Agent(
 
 if __name__ == "__main__":
     agent("""Give me my daily briefing and calculate my study blocks. Do not output to .ics file
-        My assignments file is 'assignments.csv'.""")
+        My assignments file is './assignments.csv'.""")

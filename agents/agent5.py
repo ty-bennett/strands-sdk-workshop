@@ -141,7 +141,8 @@ def _get_busy_slots(start_dt: datetime, end_dt: datetime) -> tuple[list[tuple[da
     Returns a combined list of (event_start, event_end) tuples in local time.
     """
     service = _get_calendar_service()
-    calendar_ids, unresolved = _resolve_calendar_ids(service, DEFAULT_CALENDARS)
+    calendar_ids, unresolved = _resolve_calendar_ids(
+        service, DEFAULT_CALENDARS)
     if not calendar_ids:
         raise RuntimeError(
             "No readable Google calendars were resolved. "
@@ -234,12 +235,14 @@ def get_gmail_calendar_events(filepath: str, start_hour: int = 9, end_hour: int 
     window_end = window_start + timedelta(days=14)
 
     try:
-        busy_slots, checked, unresolved, errors = _get_busy_slots(window_start, window_end)
+        busy_slots, checked, unresolved, errors = _get_busy_slots(
+            window_start, window_end)
     except Exception as exc:
         return f"Could not read Google Calendar: {exc}"
 
     lines = [
-        f"Checked Google Calendar from {window_start.strftime('%Y-%m-%d %I:%M %p')} "
+        f"Checked Google Calendar from {
+            window_start.strftime('%Y-%m-%d %I:%M %p')} "
         f"to {window_end.strftime('%Y-%m-%d %I:%M %p')}.",
         f"Resolved calendars: {', '.join(checked) if checked else '(none)'}",
     ]
@@ -435,13 +438,17 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
         window_start = datetime.now()
         window_end = window_start + timedelta(days=14)
         try:
-            busy_slots, checked, unresolved, errors = _get_busy_slots(window_start, window_end)
+            busy_slots, checked, unresolved, errors = _get_busy_slots(
+                window_start, window_end)
             calendar_status = (
-                f"Checked Google Calendar: {len(busy_slots)} existing event(s) found "
-                f"across {', '.join(checked) if checked else '(no readable calendars)'}."
+                f"Checked Google Calendar: {
+                    len(busy_slots)} existing event(s) found "
+                f"across {
+                    ', '.join(checked) if checked else '(no readable calendars)'}."
             )
             if unresolved:
-                calendar_status += f" Unresolved calendars: {', '.join(unresolved)}."
+                calendar_status += f" Unresolved calendars: {
+                    ', '.join(unresolved)}."
             if errors:
                 calendar_status += f" Read errors: {' | '.join(errors)}."
         except Exception as e:
@@ -519,16 +526,19 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
 
         summary = [
             calendar_status,
-            f"Scheduled {len(events)} study block(s) - saved to {output_path}\n",
+            f"Scheduled {
+                len(events)} study block(s) - saved to {output_path}\n",
         ]
         for ev in events:
             duration_mins = int((ev["end"] - ev["start"]).seconds / 60)
             summary.append(
                 f"  {ev['start'].strftime('%a %b %d %I:%M %p')} – "
-                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {ev['summary']}"
+                f"{ev['end'].strftime('%I:%M %p')} ({duration_mins}min)  {
+                    ev['summary']}"
             )
         summary.append(
-            f"\nTo import: Google Calendar → Settings → Import → select {output_path}"
+            f"\nTo import: Google Calendar → Settings → Import → select {
+                output_path}"
         )
         return "\n".join(summary)
 
@@ -549,9 +559,10 @@ def _get_agent():
     global _agent
     if _agent is None:
         _agent = Agent(
-            model=BedrockModel(model_id="amazon.nova-pro-v1:0"),
+            model=BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0"),
             system_prompt=load_system_prompt(),
-            tools=[get_gmail_calendar_events, load_assignments, schedule_study_blocks, http_request],
+            tools=[get_gmail_calendar_events, load_assignments,
+                   schedule_study_blocks, http_request],
         )
     return _agent
 

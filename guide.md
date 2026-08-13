@@ -233,12 +233,14 @@ Now configure the AWS Bedrock model that will power your agent:
 
 ```python
 # Create the model instance
-model = BedrockModel(model_id="us.anthropic.claude-sonnet-4-5")
+model = BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
 ```
 
 **What's happening here:**
 - `BedrockModel` creates a connection to AWS Bedrock
-- `model_id` specifies which model to use (Claude Sonnet 4.5 in this case)
+- `model_id` specifies which model to use (Claude Haiku 4.5 in this case)
+- The `us.` prefix is a cross-region inference profile — required for this model,
+  which has no single-region endpoint in most US regions
 - This model will handle all natural language understanding and generation
 
 ### 2.7 Create the Agent

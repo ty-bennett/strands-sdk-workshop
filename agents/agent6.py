@@ -291,7 +291,7 @@ _agent = None
 def _get_agent():
     global _model, _agent
     if _agent is None:
-        _model = BedrockModel(model_id="amazon.nova-pro-v1:0")
+        _model = BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
         _agent = Agent(
             model=_model,
             system_prompt=load_system_prompt(),
@@ -620,7 +620,8 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
 
         # Write ICS to S3 only
         download_link = None
-        _write_s3_text(ics_content, output_s3_uri, content_type="text/calendar")
+        _write_s3_text(ics_content, output_s3_uri,
+                       content_type="text/calendar")
         destination = f"uploaded to {output_s3_uri}"
         try:
             download_link = _generate_s3_download_url(output_s3_uri)
@@ -642,7 +643,8 @@ def schedule_study_blocks(filepath: str, start_hour: int = 9, end_hour: int = 21
                 suggested_name = Path(_parse_s3_uri(output_s3_uri)[1]).name
                 summary.append(
                     "curl download: "
-                    f"curl -L {shlex.quote(download_link)} -o {shlex.quote(suggested_name)}"
+                    f"curl -L {shlex.quote(download_link)
+                               } -o {shlex.quote(suggested_name)}"
                 )
         summary.append(
             "\nTo add to Google Calendar: Settings → Import → select the ICS file")

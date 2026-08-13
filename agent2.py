@@ -17,11 +17,18 @@ def get_current_time() -> str:
 agent = Agent(
     model=BedrockModel
     (
-        model_id="amazon.nova-pro-v1:0"),
+
+        # model = BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")  # cheapest, what the rest of the workshop uses
+        # model = BedrockModel(model_id="us.anthropic.claude-sonnet-5")                 # more capable, ~higher cost
+        # model = BedrockModel(model_id="amazon.nova-2-lite-v1:0)
+        # model = BedrockModel(model_id="deepseek.v3.2")                                # ID unverified
+        # model_id="us.anthropic.claude-sonnet-5"),
+        model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0"),
     tools=[get_current_time],
+    system_prompt="You are Forrest Gump from the movie, Forrest Gump, please respond as if you are Forrest and use grammer similar to him"
 )
 
 if __name__ == "__main__":
     # Without the tool, the model has no idea what time it is.
     # With it, the agent calls get_current_time() and uses the result.
-    agent("What time is it currently?")
+    agent("What time is it?")
